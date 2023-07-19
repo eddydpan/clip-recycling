@@ -13,10 +13,9 @@ with open("results.txt", "r") as f:
         material = line.split(" [")[0]
         material_list.append(material.strip())  # Trim any leading/trailing whitespace
     f.close()
-    
 text = tokenizer(material_list)
 
-def process_image(image_input):
+def process_image(image_input, material_input):
 
     results = {}
     float_values = []
@@ -29,7 +28,7 @@ def process_image(image_input):
         text_features /= text_features.norm(dim=-1, keepdim=True)
         text_probs = (100.0 * image_features @ text_features.T).softmax(dim=-1)
     
-    print("Label probs:", text_probs)  # prints: [[1., 0., 0.]]
+    #print("Label probs:", text_probs) 
 
     counter = 0
     for row in text_probs:
@@ -39,11 +38,22 @@ def process_image(image_input):
             counter += 1
 
     sorted_float_values = sorted(float_values, reverse=True)
-    print(sorted_float_values)
-    return [["Material : " + str(results[sorted_float_values[0]]), "Confidence : " + str(sorted_float_values[0])], ["Material : " + str(results[sorted_float_values[1]]), "Confidence : " + str(sorted_float_values[1])]]
+    # print(sorted_float_values)
 
-inputs = gr.inputs.Image(type="pil")
-outputs = [gr.outputs.Textbox(label="Top Result"), gr.outputs.Textbox(label="Second Result")]
+    index = -1
+    for i in range(len(material_list)):
+        if material_list[i] == material_input:
+            index = i
+            break
+    if index == -1:
+        material_accuracy = None
+    else:
+        material_accuracy = material_input + ": " + str(float_values[index])
+
+    return [[results[sorted_float_values[0]], sorted_float_values[0]], [results[sorted_float_values[1]], sorted_float_values[1]], [results[sorted_float_values[2]], sorted_float_values[2]], material_accuracy]
+
+inputs = [gr.inputs.Image(type="pil"), gr.inputs.Dropdown(material_list)]
+outputs = [gr.outputs.Textbox(label="Top Result"), gr.outputs.Textbox(label="Second Result"), gr.outputs.Textbox(label="Third Result"), gr.outputs.Textbox(label="Material Accuracy")]
 
 interface = gr.Interface(fn=process_image, inputs=inputs, outputs=outputs)
-interface.launch(share=True)
+interface.launch()
